@@ -1,0 +1,230 @@
+﻿@page
+@model Test_Tourkit_FontEnd.Pages.ProductCategoryModel
+
+@{
+    ViewData["Title"] = "Product Categories List";
+}
+
+<h2>Product Categories List</h2>
+
+<table id="productsCategoriesTable" class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Quantity of products</th>
+            <th>Date Added</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+
+    </tbody>
+</table>
+<button class="btn btn-primary mb-3" onclick="openAddProductModal()">Add Product</button>
+
+<!-- Add Product Category -->
+<div id="addProductModal" class="modal" tabindex="-1" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Product Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addProductForm">
+                    <div class="mb-3">
+                        <label for="newProductCategory1" class="form-label">Product Category Name</label>
+                        <input type="text" class="form-control" id="newProductCategory1" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="newDateAdded" class="form-label">Date Added</label>
+                        <input type="date" class="form-control" id="newDateAdded" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Product Category</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Product Category -->
+<div id="editProductModal" class="modal" tabindex="-1" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editProductForm">
+                    <input type="hidden" id="productCategoryId" />
+                    <div class="mb-3">
+                        <label for="productCategoryIdDisplay" class="form-label">Product Category ID</label>
+                        <input type="text" class="form-control" id="productCategoryIdDisplay" disabled />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="productCategory1" class="form-label">Product Category Name</label>
+                        <input type="text" class="form-control" id="productCategory1" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="productId" class="form-label">Quantity of products</label>
+                        <input type="number" class="form-control" id="productId" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="dateAdded" class="form-label">Date Added</label>
+                        <input type="text" class="form-control" id="dateAdded" disabled />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            var table = $('#productsCategoriesTable').DataTable({
+                "ajax": {
+                    "url": "https://localhost:7165/api/ProductCategory/GetProductCategories", 
+                    "type": "GET",
+                    "dataSrc": function (json) {
+                        return json || []; 
+                    }
+                },
+                "columns": [
+                    { "data": "productCategoryId" },
+                    { "data": "productCategory1" },
+                    { "data": "productId" },
+                    { "data": "dateAdded", "render": function (data) { return new Date(data).toLocaleDateString(); } },
+                    {
+                        "data": null,
+                        "render": function (data, type, row) {
+                            return `<button class="btn btn-info" onclick="editProduct(${row.productCategoryId})">Edit</button>
+                                                    <button class="btn btn-danger" onclick="deleteProduct(${row.productCategoryId})">Delete</button>`;
+                        }
+                    }
+                ]
+            });
+
+
+        });
+        //Delete
+        function deleteProduct(productCategoryId) {
+            if (confirm("Bạn có chắc muốn xóa sản phẩm này?")) {
+                $.ajax({
+                    url: 'https://localhost:7165/api/ProductCategory/' + productCategoryId,
+                    type: 'DELETE',
+                    success: function () {
+                        alert("Xóa thành công!");
+                        $('#addProductModal').modal('hide'); 
+                        $('#productsCategoriesTable').DataTable().ajax.reload(); 
+                    },
+                    error: function () {
+                        alert("Có lỗi xảy ra khi xóa!");
+                    }
+                });
+            }
+        }
+        // Add Product Category 
+        function openAddProductModal() {
+            $('#addProductModal').modal('show'); 
+        }
+
+        $('#addProductForm').on('submit', function (event) {
+            event.preventDefault(); 
+
+            const newProductCategory = {
+                productName: "",
+                productId: 0,
+                productCategory1: $('#newProductCategory1').val().trim(),
+                dateAdded: $('#newDateAdded').val(),
+                productCategoryId: "" 
+            };
+
+
+            $.ajax({
+                url: 'https://localhost:7165/api/ProductCategory/AddProductCategory',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(newProductCategory),
+                success: function (response) {
+                    alert("Thêm loại sản phẩm thành công!");
+                    $('#addProductModal').modal('hide'); 
+                    $('#productsCategoriesTable').DataTable().ajax.reload(); 
+                },
+                error: function (xhr) {
+                    const errorMessage = xhr.responseJSON?.message || "Có lỗi xảy ra!";
+                    alert(errorMessage);
+                }
+            });
+        });
+        //Edit product category 
+        function editProduct(productCategoryId) {
+            $.ajax({
+                url: 'https://localhost:7165/api/ProductCategory/' + productCategoryId,
+                type: 'GET',
+                success: function (productCategory) {
+                    $('#productCategoryId').val(productCategory.productCategoryId);
+                    $('#productCategoryIdDisplay').val(productCategory.productCategoryId);
+                    $('#productCategory1').val(productCategory.productCategory1);
+                    $('#productId').val(productCategory.productId);
+                    $('#dateAdded').val(new Date(productCategory.dateAdded).toISOString().split('T')[0]); 
+                    $('#editProductModal').modal('show');
+                },
+                error: function () {
+                    alert("Có lỗi xảy ra khi lấy thông tin sản phẩm!");
+                }
+            });
+        }
+        $('#editProductForm').submit(function (event) {
+            event.preventDefault();
+
+            var dateValue = $('#dateAdded').val();
+            var validDate = new Date(dateValue);
+
+            if (isNaN(validDate)) {
+                validDate = new Date();  
+            }
+
+            var productData = {
+                productId: $('#productId').val(),                 
+                productName: 'string',             
+                price: $('#price').val(),                         
+                productCategory1: $('#productCategory1').val(),   
+                dateAdded: validDate.toISOString(),               
+                productCategoryId: $('#productCategoryId').val()  
+            };
+
+            $.ajax({
+                url: 'https://localhost:7165/api/ProductCategory/' + productData.productCategoryId,
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify(productData),
+                success: function (response, status, xhr) {
+                    if (xhr.status === 200) {
+                        alert("Xóa loại sản phẩm thất bại")
+                        alert("Cập nhật tên loại sản phẩm thành công!");
+                    } else if (xhr.status === 204) {
+                        alert("Xóa loại sản phẩm thành công!");
+                    }
+                    $('#productsCategoriesTable').DataTable().ajax.reload(); 
+                    $('#editProductModal').modal('hide'); 
+                },
+                error: function (xhr) {
+                    console.log("Error Response:", xhr.responseJSON); 
+                    alert("Không được để trống ");
+                }
+            });
+        });
+
+
+    </script>
+}
